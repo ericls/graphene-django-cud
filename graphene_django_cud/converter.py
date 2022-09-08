@@ -35,7 +35,6 @@ from graphene_file_upload.scalars import Upload
 from graphql import assert_valid_name, GraphQLError
 
 from graphene_django_cud.types import TimeDelta
-from graphene_django_cud.util.string import to_camel_case, to_const
 
 
 def is_required(field, required=None, is_many_to_many=False):
@@ -53,6 +52,8 @@ def is_required(field, required=None, is_many_to_many=False):
 
 
 def convert_choice_name(name):
+    from .util.string import to_const
+
     name = to_const(force_str(name))
     try:
         assert_valid_name(name)
@@ -77,6 +78,8 @@ def get_choices(choices):
 
 
 def convert_choices_field(field, choices, required=None):
+    from .util.string import to_camel_case
+
     meta = field.model._meta
     name = to_camel_case("{}_{}".format(meta.object_name, field.name))
     choices = list(get_choices(choices))
@@ -103,6 +106,8 @@ def convert_django_field_with_choices(
     field_foreign_key_extras=None,
     field_one_to_one_extras=None,
 ):
+    from .util.string import to_camel_case
+
     choices = getattr(field, "choices", None)
     if choices:
         registry_name = to_camel_case("{}_{}".format(field.model._meta.object_name, field.name))
@@ -110,8 +115,9 @@ def convert_django_field_with_choices(
         if registry:
             from_registry = registry.get_converted_field(field)
             if from_registry:
-                from_registry.kwargs["description"] = field.help_text
-                from_registry.kwargs["required"] = is_required(field, required)
+                if hasattr(from_registry, "kwargs"):
+                    from_registry.kwargs["description"] = field.help_text
+                    from_registry.kwargs["required"] = is_required(field, required)
                 return from_registry
 
         converted = convert_choices_field(field, choices, required)
